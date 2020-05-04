@@ -82,6 +82,14 @@ class LineByLineTextDataset(Dataset):
 
     def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, local_rank=-1):
         assert os.path.isfile(file_path)
+
+        block_size = block_size - tokenizer.num_special_tokens_to_add(pair=False)
+
+        directory, filename = os.path.split(file_path)
+        cached_features_file = os.path.join(
+            directory, "cached_lm_{}_{}_{}".format(tokenizer.__class__.__name__, str(block_size), filename,),
+        )
+
         # Here, we do not cache the features, operating under the assumption
         # that we will soon use fast multithreaded tokenizers from the
         # `tokenizers` repo everywhere =)
@@ -92,6 +100,13 @@ class LineByLineTextDataset(Dataset):
 
         batch_encoding = tokenizer.batch_encode_plus(lines, add_special_tokens=True, max_length=block_size)
         self.examples = batch_encoding["input_ids"]
+
+        start = time.time()
+        with open(cached_features_file, "wb") as handle:
+            pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        logger.info(
+            f"Saving features into cached file %s [took %.3f s]", cached_features_file, time.time() - start
+        )
 
     def __len__(self):
         return len(self.examples)
