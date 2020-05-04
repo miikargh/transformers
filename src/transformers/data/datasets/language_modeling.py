@@ -83,6 +83,8 @@ class LineByLineTextDataset(Dataset):
     def __init__(self, tokenizer: PreTrainedTokenizer, file_path: str, block_size: int, local_rank=-1):
         assert os.path.isfile(file_path)
 
+        start = time.time()
+
         block_size = block_size - tokenizer.num_special_tokens_to_add(pair=False)
 
         directory, filename = os.path.split(file_path)
@@ -101,7 +103,6 @@ class LineByLineTextDataset(Dataset):
         batch_encoding = tokenizer.batch_encode_plus(lines, add_special_tokens=True, max_length=block_size)
         self.examples = batch_encoding["input_ids"]
 
-        start = time.time()
         with open(cached_features_file, "wb") as handle:
             pickle.dump(self.examples, handle, protocol=pickle.HIGHEST_PROTOCOL)
         logger.info(
